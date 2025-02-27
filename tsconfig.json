@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "noImplicitOverride": true,
+    "noEmitOnError": false,
+    "noUnusedLocals": true,
+    "noImplicitReturns": true,
+    "strict": true,
+    "incremental": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "downlevelIteration": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    // Compiling
+    "tsBuildInfoFile": "./node_modules/.tmp/tsbuildinfo.json",
+    "module": "CommonJS",
+    "outDir": "lib",
+    "target": "ES2020",
+    "jsx": "react",
+    "lib": [
+      "es2020",
+      "dom"
+    ]
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

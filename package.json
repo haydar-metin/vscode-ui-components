@@ -1,0 +1,61 @@
+{
+    "name": "@eclipse-cdt-cloud/vscode-ui-components",
+    "displayName": "VSCode UI Components",
+    "description": "VSCode UI Components for React",
+    "version": "0.0.1",
+    "publisher": "eclipse-cdt",
+    "license": "MIT",
+    "repository": "https://github.com/eclipse-cdt-cloud/vscode-ui-components",
+    "qna": "https://github.com/eclipse-cdt-cloud/vscode-ui-components/issues",
+    "main": "./lib/index.js",
+    "types": "./lib/index.d.ts",
+    "files": [
+        "lib"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
+    "scripts": {
+        "prepare": "yarn clean && yarn build",
+        "clean": "rimraf ./lib ./node_modules/.tmp",
+        "build": "tsc && yarn lint",
+        "watch": "tsc -w",
+        "lint": "eslint ."
+    },
+    "dependencies": {
+        "@floating-ui/react": "^0.26.17",
+        "@vscode/codicons": "0.0.20",
+        "@vscode/webview-ui-toolkit": "^1.4.0",
+        "antd": "^5.22.1",
+        "primeflex": "^3.3.1",
+        "react-markdown": "^9.0.1",
+        "remark-gfm": "^4.0.0",
+        "throttle-debounce": "5.0.2",
+        "vscode-messenger": "^0.4.5",
+        "vscode-messenger-common": "^0.4.5",
+        "vscode-messenger-webview": "^0.4.5"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.21.0",
+        "@types/node": "^20.0.0",
+        "@types/react": "^18.0.26",
+        "@types/react-dom": "^18.0.9",
+        "@types/throttle-debounce": "5.0.2",
+        "@types/vscode": "^1.63.2",
+        "@types/vscode-webview": "^1.57.0",
+        "@typescript-eslint/eslint-plugin": "^5.49.0",
+        "@typescript-eslint/parser": "^5.49.0",
+        "eslint": "^9.21.0",
+        "globals": "^16.0.0",
+        "prettier": "^3.5.2",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "typescript": "^5.7.3",
+        "typescript-eslint": "^8.25.0",
+        "rimraf": "^6.0.1"
+    },
+    "peerDependencies": {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0"
+    }
+}
