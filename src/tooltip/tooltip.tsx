@@ -1,9 +1,10 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
  ********************************************************************************/
+
 import {
     FloatingPortal,
     autoUpdate,
@@ -32,10 +33,7 @@ interface TooltipOptions {
 type ContextType = ReturnType<typeof useTooltip> | null;
 const TooltipContext = React.createContext<ContextType>(null);
 
-function useTooltip({
-    initialOpen = false,
-    placement = 'bottom',
-}: TooltipOptions = {}) {
+function useTooltip({ initialOpen = false, placement = 'bottom' }: TooltipOptions = {}) {
     const [open, setOpen] = React.useState(initialOpen);
 
     const floating = useFloating({
@@ -44,10 +42,7 @@ function useTooltip({
         transform: false,
         onOpenChange: setOpen,
         whileElementsMounted: autoUpdate,
-        middleware: [
-            offset(5),
-            shift({ padding: 5 })
-        ]
+        middleware: [offset(5), shift({ padding: 5 })]
     });
     const context = floating.context;
 
@@ -85,24 +80,17 @@ const useTooltipContext = () => {
     return context;
 };
 
-export function Tooltip({
-    children,
-    ...options
-}: { children: React.ReactNode } & TooltipOptions) {
+export function Tooltip({ children, ...options }: { children: React.ReactNode } & TooltipOptions) {
     // This can accept any props as options, e.g. `placement`,
     // or other positioning options.
     const tooltip = useTooltip(options);
-    return (
-        <TooltipContext.Provider value={tooltip}>
-            {children}
-        </TooltipContext.Provider>
-    );
+    return <TooltipContext.Provider value={tooltip}>{children}</TooltipContext.Provider>;
 }
 
-export const TooltipTrigger = React.forwardRef<
-    HTMLElement,
-    React.HTMLProps<HTMLElement> & { asChild?: boolean }
->(function TooltipTrigger({ children, asChild = true, ...props }, propRef) {
+export const TooltipTrigger = React.forwardRef<HTMLElement, React.HTMLProps<HTMLElement> & { asChild?: boolean }>(function TooltipTrigger(
+    { children, asChild = true, ...props },
+    propRef
+) {
     const context = useTooltipContext();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const childrenRef = (children as any).ref;
@@ -122,20 +110,16 @@ export const TooltipTrigger = React.forwardRef<
     }
 
     return (
-        <div
-            ref={ref}
-            data-tooltip-state={context.open ? 'open' : 'closed'}
-            {...context.getReferenceProps(props)}
-        >
+        <div ref={ref} data-tooltip-state={context.open ? 'open' : 'closed'} {...context.getReferenceProps(props)}>
             {children}
         </div>
     );
 });
 
-export const TooltipContent = React.forwardRef<
-    HTMLDivElement,
-    React.HTMLProps<HTMLDivElement>
->(function TooltipContent({ style, ...props }, propRef) {
+export const TooltipContent = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(function TooltipContent(
+    { style, ...props },
+    propRef
+) {
     const context = useTooltipContext();
     const ref = useMergeRefs([context.refs.setFloating, propRef]);
 

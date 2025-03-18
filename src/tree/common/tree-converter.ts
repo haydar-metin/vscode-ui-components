@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -13,21 +13,21 @@ import type { CDTTreeItemResource, CDTTreeItem } from './tree-model-types';
  * It will be propagated to all TreeResourceConverters.
  */
 export interface CDTTreeConverterContext<TResource extends CDTTreeItemResource = CDTTreeItemResource> {
-    parent?: CDTTreeItem<CDTTreeItemResource>,
+    parent?: CDTTreeItem<CDTTreeItemResource>;
     /**
      * The expanded keys of the tree. This is used to determine if a node should be expanded or not.
      */
-    expandedKeys: string[],
+    expandedKeys: string[];
     /**
      * The pinned keys of the tree. This is used to determine if a node should be pinned or not.
      */
-    pinnedKeys: string[]
+    pinnedKeys: string[];
     /**
      * A map of all resources that are currently in the tree.
      * This can be useful to access parent resources.
      * It is filled while converting the tree.
      */
-    resourceMap: Map<string, TResource>
+    resourceMap: Map<string, TResource>;
 }
 
 /**

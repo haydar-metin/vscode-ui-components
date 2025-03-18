@@ -1,74 +1,11 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
  ********************************************************************************/
-import React from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Tooltip, TooltipTrigger, TooltipContent } from '../../../tooltip/tooltip';
+
 import { CDTTreeItemResource, CDTTreeItem, CDTTreeTableStringColumn } from '../../common';
-
-export function classNames(...classes: (string | Record<string, boolean>)[]): string {
-    return classes.filter(c => c !== undefined).map(c => {
-        if (typeof c === 'string') {
-            return c;
-        }
-
-        return Object.entries(c).filter(([, value]) => value).map(([key]) => key);
-    }).join(' ');
-}
-
-export function createHighlightedText(label?: string, highlights?: [number, number][]): React.JSX.Element {
-    if (label === undefined) {
-        return <span>No label provided</span>;
-    }
-    if (highlights === undefined || highlights.length === 0) {
-        return <span>{label}</span>;
-    }
-
-    highlights.sort((a, b) => a[0] - b[0]);
-
-    const result: React.JSX.Element[] = [];
-    let currentPosition = 0;
-
-    highlights.forEach(([start, end], index) => {
-        if (currentPosition < start) {
-            result.push(<span key={`text-${index}`}>{label.slice(currentPosition, start)}</span>);
-        }
-        result.push(<span key={`highlight-${index}`} className="label-highlight">{label.slice(start, end + 1)}</span>);
-        currentPosition = end + 1;
-    });
-
-    // Add any remaining text after the last highlight
-    if (currentPosition < label.length) {
-        result.push(<span key="text-end">{label.slice(currentPosition)}</span>);
-    }
-
-    return <div className='tree-label'>
-        <span>{result}</span>
-    </div>;
-}
-
-export function createLabelWithTooltip(child: React.JSX.Element, tooltip?: string): React.JSX.Element {
-    const label = <div className="tree-label flex-auto flex align-items-center">
-        {child}
-    </div >;
-
-    if (tooltip === undefined) {
-        return label;
-    }
-
-    return <Tooltip>
-        <TooltipTrigger>
-            {label}
-        </TooltipTrigger>
-        <TooltipContent>
-            <Markdown className="markdown" remarkPlugins={[remarkGfm]}>{tooltip}</Markdown>
-        </TooltipContent>
-    </Tooltip>;
-}
 
 /**
  * Recursively filters the tree to include items that match the search text
@@ -85,19 +22,19 @@ export function filterTree<T extends CDTTreeItemResource>(
         // Check if the current item matches the search
         const matches = Object.values(item.columns ?? {})
             .filter(column => column.type === 'string')
-            .some(column =>
-                ((column as CDTTreeTableStringColumn).label || '').toLowerCase().includes(searchText.toLowerCase())
-            );
+            .some(column => ((column as CDTTreeTableStringColumn).label || '').toLowerCase().includes(searchText.toLowerCase()));
 
         if (matches) {
             // item matches: show all or only matching children
             const children = options.filterChildren
-                ? item.children ? filterTree(item.children, searchText, options) : []
-                : item.children ?? [];
+                ? item.children
+                    ? filterTree(item.children, searchText, options)
+                    : []
+                : (item.children ?? []);
             matching.push({
                 ...item,
                 children: children.length > 0 ? children : undefined,
-                matching: true,
+                matching: true
             });
         } else if (item.children) {
             // item does not match: check if a child matches as we need to show the item as ancestor in that case
@@ -168,9 +105,7 @@ export function traverseTree<T extends CDTTreeItemResource, U = CDTTreeItem<T>>(
     return result;
 }
 
-export function getAncestors<T extends CDTTreeItemResource>(
-    item: CDTTreeItem<T>
-): CDTTreeItem<CDTTreeItemResource>[] {
+export function getAncestors<T extends CDTTreeItemResource>(item: CDTTreeItem<T>): CDTTreeItem<CDTTreeItemResource>[] {
     const ancestors: CDTTreeItem<CDTTreeItemResource>[] = [];
     let current: CDTTreeItem<CDTTreeItemResource> | undefined = item.parent;
     while (current) {

@@ -1,12 +1,11 @@
 /********************************************************************************
- * Copyright (C) 2024 Arm Limited and others.
+ * Copyright (C) 2024-2025 Arm Limited and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
  ********************************************************************************/
 
 import type { CommandDefinition } from '../../vscode/webview-types';
-
 
 /**
  * A column definition for a tree table.

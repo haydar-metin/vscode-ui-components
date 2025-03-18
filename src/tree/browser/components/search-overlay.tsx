@@ -1,5 +1,5 @@
 /*********************************************************************
- * Copyright (c) 2024 Arm Limited and others
+ * Copyright (c) 2024-2025 Arm Limited and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -80,9 +80,12 @@ export const SearchOverlay = React.forwardRef<SearchOverlay, SearchOverlayProps>
         hide: () => hide()
     }));
 
-    return (<div className={showSearch ? 'search-overlay visible' : 'search-overlay'} onKeyDown={onKeyDown}>
-        <input ref={searchTextRef} onChange={onTextChange} onFocus={onFocus} placeholder="Find" className="search-input" />
-        <VSCodeButton title='Close (Escape)' appearance='icon' aria-label='Close (Escape)'><span className='codicon codicon-close' onClick={() => hide()} /></VSCodeButton>
-    </div>
+    return (
+        <div className={showSearch ? 'search-overlay visible' : 'search-overlay'} onKeyDown={onKeyDown}>
+            <input ref={searchTextRef} onChange={onTextChange} onFocus={onFocus} placeholder='Find' className='search-input' />
+            <VSCodeButton title='Close (Escape)' appearance='icon' aria-label='Close (Escape)'>
+                <span className='codicon codicon-close' onClick={() => hide()} />
+            </VSCodeButton>
+        </div>
     );
 });

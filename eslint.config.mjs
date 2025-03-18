@@ -1,8 +1,16 @@
-// @ts-check
+/**********************************************************************************
+ * Copyright (c) 2025 EclipseSource and others.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the MIT License as outlined in the LICENSE file.
+ **********************************************************************************/
 
 import globals from 'globals';
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import header from 'eslint-plugin-header';
+
+header.rules.header.meta.schema = false;
 
 export default tseslint.config(
     {
@@ -52,9 +60,25 @@ export default tseslint.config(
             ],
 
             'no-trailing-spaces': ['error'],
-            'object-curly-spacing': ['error', 'always'],
-
-            // TypeScript specific rules
+            'object-curly-spacing': ['error', 'always']
+        }
+    },
+    {
+        name: 'typescript',
+        files: ['**/*.ts', '**/*.mts', '**/*.cts', '**/*.tsx'],
+        plugins: {
+            typescript: tseslint
+        },
+        rules: {
+            '@typescript-eslint/explicit-member-accessibility': [
+                'error',
+                {
+                    accessibility: 'explicit',
+                    overrides: {
+                        constructors: 'off'
+                    }
+                }
+            ],
             '@typescript-eslint/no-this-alias': 'off',
             '@typescript-eslint/no-namespace': 'off',
             '@typescript-eslint/no-unused-vars': [
@@ -62,6 +86,31 @@ export default tseslint.config(
                 {
                     argsIgnorePattern: '^_'
                 }
+            ]
+        }
+    },
+    {
+        name: 'header',
+        files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'],
+        plugins: {
+            header
+        },
+        rules: {
+            'header/header': [
+                2,
+                'block',
+                [
+                    {
+                        pattern: '[\n\r]+ \\* Copyright \\([cC]\\) \\d{4}(-\\d{4})? .*[\n\r]+',
+                        template: `*********************************************************************************
+* Copyright (c) ${new Date().getFullYear()} Company and others.
+*
+* This program and the accompanying materials are made available under the
+* terms of the MIT License as outlined in the LICENSE file.
+*********************************************************************************`
+                    }
+                ],
+                2
             ]
         }
     }

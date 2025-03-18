@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -14,11 +14,19 @@ import type { MaybePromise } from '../../base/utils';
  *
  * @param TNode The type of the tree nodes in the domain model.
  * @param TSerializedNode The type of the serialized tree nodes. Those are the nodes that
- * are actually send to the webview to be display in the tree.
+ * are actually send to the webview to be displayed in the tree.
  */
 export interface CDTTreeDataProvider<TNode, TSerializedNode> {
+    /**
+     * An event that is fired when the tree is disposed / terminated.
+     */
     onDidTerminate: vscode.Event<CDTTreeTerminatedEvent<TNode>>;
+
+    /**
+     * An event that is fired when the tree data changes.
+     */
     onDidChangeTreeData: vscode.Event<CDTTreeNotification<TNode | TNode[] | undefined | null>>;
+
     /**
      * Get the column definitions for the tree table.
      */
@@ -30,7 +38,7 @@ export interface CDTTreeDataProvider<TNode, TSerializedNode> {
     getSerializedRoots(): MaybePromise<TSerializedNode[]>;
 
     /**
-     * Get the children of the given element.
+     * Get the serialization of the given element.
      */
     getSerializedData(element: TNode): MaybePromise<TSerializedNode>;
 }

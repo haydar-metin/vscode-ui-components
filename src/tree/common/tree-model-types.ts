@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2024 Arm Limited and others.
+ * Copyright (C) 2024-2025 EclipseSource, Arm Limited and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -18,7 +18,7 @@ export interface CDTTreeItemResource {
  * A tree item that is used in the CDT tree view.
  */
 export interface CDTTreeItem<T extends CDTTreeItemResource = CDTTreeItemResource> {
-    __type: 'CDTTreeItem'
+    __type: 'CDTTreeItem';
     id: string;
     key: string;
     parent?: CDTTreeItem<CDTTreeItemResource>;

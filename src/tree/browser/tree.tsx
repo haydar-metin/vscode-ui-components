@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -15,10 +15,18 @@ import { debounce } from 'throttle-debounce';
 import { ExpandIcon } from './components/expand-icon';
 import { SearchOverlay } from './components/search-overlay';
 import { TreeNavigator } from './components/treetable-navigator';
-import { classNames, createHighlightedText, createLabelWithTooltip, filterTree, getAncestors, traverseTree } from './components/utils';
-import { findNestedValue } from '../../base';
-import { type CDTTreeItemResource, type CDTTreeTableColumnDefinition, type CDTTreeItem, CDTTreeWebviewContext, type CDTTreeTableStringColumn, type CDTTreeTableActionColumn } from '../common';
+import { filterTree, getAncestors, traverseTree } from './components/utils';
+import { classNames, findNestedValue } from '../../base';
+import {
+    type CDTTreeItemResource,
+    type CDTTreeTableColumnDefinition,
+    type CDTTreeItem,
+    CDTTreeWebviewContext,
+    type CDTTreeTableStringColumn,
+    type CDTTreeTableActionColumn
+} from '../common';
 import type { CommandDefinition } from '../../vscode/webview-types';
+import { createHighlightedText, createLabelWithTooltip } from '../../label/label-helpers';
 
 /**
  * Component to render a tree table.
@@ -26,6 +34,7 @@ import type { CommandDefinition } from '../../vscode/webview-types';
 export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = {
     /**
      * Information about the columns to be rendered.
+     * If a single column is provided, then it will be rendered as a tree.
      */
     columnDefinitions?: CDTTreeTableColumnDefinition[];
     /**
@@ -33,7 +42,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
      */
     dataSource?: CDTTreeItem<T>[];
     /**
-    * Function to sort the data source.
+     * Function to sort the data source.
      */
     dataSourceSorter?: (dataSource: CDTTreeItem<T>[]) => CDTTreeItem<T>[];
     /**
@@ -48,7 +57,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
          * Callback to be called when a row is expanded or collapsed.
          */
         onExpand?: ExpandableConfig<CDTTreeItem<T>>['onExpand'];
-    },
+    };
     /**
      * Configuration for the pinning of the tree table.
      */
@@ -61,7 +70,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
          * Callback to be called when a row is pinned or unpinned.
          */
         onPin?: (event: React.UIEvent, pinned: boolean, record: CDTTreeItem<T>) => void;
-    }
+    };
     /**
      * Configuration for the actions of the tree table.
      */
@@ -70,7 +79,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
          * Callback to be called when an action is triggered.
          */
         onAction?: (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>) => void;
-    }
+    };
 };
 
 interface BodyRowProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -79,14 +88,18 @@ interface BodyRowProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const BodyRow = React.forwardRef<HTMLDivElement, BodyRowProps>((props, ref) => {
-    // Support VSCode context menu items
+    // Support VS Code context menu items
     return (
         <div
             ref={ref}
             tabIndex={0}
             key={props['data-row-key']}
             {...props}
-            {...CDTTreeWebviewContext.create({ webviewSection: 'tree-item', cdtTreeItemId: props['data-row-key'], cdtTreeItemType: props.record.resource.__type })}
+            {...CDTTreeWebviewContext.create({
+                webviewSection: 'tree-item',
+                cdtTreeItemId: props['data-row-key'],
+                cdtTreeItemType: props.record.resource.__type
+            })}
         />
     );
 });
@@ -108,7 +121,7 @@ function useWindowSize() {
     return size;
 }
 
-export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>): React.ReactElement {
+export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): React.ReactElement {
     const { width, height } = useWindowSize();
     const [globalSearchText, setGlobalSearchText] = React.useState<string | undefined>();
     const globalSearchRef = React.useRef<SearchOverlay>(null);
@@ -151,12 +164,15 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
 
     const [selection, setSelection] = React.useState<CDTTreeItem>();
 
-    const selectRow = React.useCallback((record: CDTTreeItem) => {
-        // Single select only
-        if (selection?.key !== record.key) {
-            setSelection(record);
-        }
-    }, [selection]);
+    const selectRow = React.useCallback(
+        (record: CDTTreeItem) => {
+            // Single select only
+            if (selection?.key !== record.key) {
+                setSelection(record);
+            }
+        },
+        [selection]
+    );
 
     // ==== Expansion ====
 
@@ -174,7 +190,6 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
         }
         return Array.from(expanded);
     }, [filteredData, globalSearchText, props.expansion?.expandedRowKeys, selection, autoSelectRowRef.current]);
-
 
     const handleExpand = React.useCallback(
         (expanded: boolean, record: CDTTreeItem<T>) => {
@@ -211,81 +226,85 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
 
     // ==== Navigation ====
 
-    const navigator = React.useMemo(() => new TreeNavigator({
-        ref,
-        rowIndex: dataSourceIndex.rowIndex,
-        expandedRowKeys,
-        expand: handleExpand,
-        select: selectRow
-    }), [ref, dataSourceIndex.rowIndex, expandedRowKeys, handleExpand, selectRow]);
+    const navigator = React.useMemo(
+        () =>
+            new TreeNavigator({
+                ref,
+                rowIndex: dataSourceIndex.rowIndex,
+                expandedRowKeys,
+                expand: handleExpand,
+                select: selectRow
+            }),
+        [ref, dataSourceIndex.rowIndex, expandedRowKeys, handleExpand, selectRow]
+    );
 
-    const onTableKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-        const selectedKey = selection?.key;
-        if (!selectedKey) {
-            return;
-        }
+    const onTableKeyDown = React.useCallback(
+        (event: React.KeyboardEvent<HTMLDivElement>) => {
+            const selectedKey = selection?.key;
+            if (!selectedKey) {
+                return;
+            }
 
-        const record = dataSourceIndex.keyIndex.get(selectedKey);
-        if (!record) {
-            return;
-        }
+            const record = dataSourceIndex.keyIndex.get(selectedKey);
+            if (!record) {
+                return;
+            }
 
-        switch (event.key) {
-            case 'ArrowDown': {
-                navigator.next(record);
-                break;
+            switch (event.key) {
+                case 'ArrowDown': {
+                    navigator.next(record);
+                    break;
+                }
+                case 'ArrowUp': {
+                    navigator.previous(record);
+                    break;
+                }
+                case 'ArrowLeft': {
+                    navigator.collapse(record);
+                    break;
+                }
+                case 'ArrowRight': {
+                    navigator.expand(record);
+                    break;
+                }
+                case 'Enter': {
+                    navigator.toggle(record);
+                    break;
+                }
+                case ' ': {
+                    navigator.toggle(record);
+                    break;
+                }
+                case 'PageUp': {
+                    navigator.previousPage();
+                    break;
+                }
+                case 'PageDown': {
+                    navigator.nextPage();
+                    break;
+                }
             }
-            case 'ArrowUp': {
-                navigator.previous(record);
-                break;
-            }
-            case 'ArrowLeft': {
-                navigator.collapse(record);
-                break;
-            }
-            case 'ArrowRight': {
-                navigator.expand(record);
-                break;
-            }
-            case 'Enter': {
-                navigator.toggle(record);
-                break;
-            }
-            case ' ': {
-                navigator.toggle(record);
-                break;
-            }
-            case 'PageUp': {
-                navigator.previousPage();
-                break;
-            }
-            case 'PageDown': {
-                navigator.nextPage();
-                break;
-            }
-        }
-    }, [selection, dataSourceIndex]);
+        },
+        [selection, dataSourceIndex]
+    );
 
     // ==== Renderers ====
 
-    const renderStringColumn = React.useCallback(
-        (label: string, item: CDTTreeItem<T>, column: CDTTreeTableStringColumn) => {
-            const icon = column.icon ? <i className={classNames('cell-icon', column.icon)}></i> : null;
-            let content = createHighlightedText(label, column.highlight);
+    const renderStringColumn = React.useCallback((label: string, item: CDTTreeItem<T>, column: CDTTreeTableStringColumn) => {
+        const icon = column.icon ? <i className={classNames('cell-icon', column.icon)}></i> : null;
+        let content = createHighlightedText(label, column.highlight);
 
-            if (column.tooltip) {
-                content = createLabelWithTooltip(<span>{content}</span>, column.tooltip);
-            }
+        if (column.tooltip) {
+            content = createLabelWithTooltip(<span>{content}</span>, column.tooltip);
+        }
 
-            return (
-                <div className='tree-cell ant-table-cell-ellipsis' tabIndex={0}>
-                    {icon}
-                    {content}
-                </div>
-            );
-        },
-        []
-    );
+        return (
+            <div className='tree-cell ant-table-cell-ellipsis' tabIndex={0}>
+                {icon}
+                {content}
+            </div>
+        );
+    }, []);
 
     const renderActionColumn = React.useCallback(
         (column: CDTTreeTableActionColumn | undefined, record: CDTTreeItem<T>) => {
@@ -297,27 +316,31 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
                         key={record.pinned ? 'unpin' : 'pin'}
                         title={record.pinned ? 'Unpin row' : 'Pin row'}
                         className={`codicon ${record.pinned ? 'codicon-pin' : 'codicon-pinned'}`}
-                        onClick={(event) => props.pin?.onPin?.(event, !record.pinned, record)}
+                        onClick={event => props.pin?.onPin?.(event, !record.pinned, record)}
                         aria-label={record.pinned ? 'Unpin row' : 'Pin row'}
-                        role="button"
+                        role='button'
                         tabIndex={0}
-                        onKeyDown={(event) => { if (event.key === 'Enter') props.pin?.onPin?.(event, !record.pinned, record); }}
+                        onKeyDown={event => {
+                            if (event.key === 'Enter') props.pin?.onPin?.(event, !record.pinned, record);
+                        }}
                     ></i>
                 );
             }
 
             if (column?.commands) {
-                column.commands.forEach((command) => {
+                column.commands.forEach(command => {
                     actions.push(
                         <i
                             key={command.commandId}
                             title={command.title}
                             className={`codicon codicon-${command.icon}`}
-                            onClick={(event) => props.action?.onAction?.(event, command, command.value, record)}
+                            onClick={event => props.action?.onAction?.(event, command, command.value, record)}
                             aria-label={command.title}
-                            role="button"
+                            role='button'
                             tabIndex={0}
-                            onKeyDown={(event) => { if (event.key === 'Enter') props.action?.onAction?.(event, command, command.value, record); }}
+                            onKeyDown={event => {
+                                if (event.key === 'Enter') props.action?.onAction?.(event, command, command.value, record);
+                            }}
                         ></i>
                     );
                 });
@@ -346,7 +369,7 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
 
                     return renderStringColumn(label, record, column);
                 },
-                onCell: (record) => {
+                onCell: record => {
                     const column = findNestedValue<CDTTreeTableStringColumn>(record, ['columns', columnDefinition.field]);
 
                     if (!column) {
@@ -373,7 +396,7 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
                 title: columnDefinition.field,
                 dataIndex: ['columns', columnDefinition.field],
                 width: 16 * 5,
-                render: renderActionColumn,
+                render: renderActionColumn
             };
         }
 
@@ -460,42 +483,45 @@ export function CDTTree<T extends CDTTreeItemResource,>(props: CDTTreeProps<T>):
 
     // ==== Return ====
 
-    return <div id='tree-table-root' onKeyDown={onKeyDown}>
-        <SearchOverlay key={'search'} ref={globalSearchRef} onHide={onSearchHide} onShow={onSearchShow} onChange={onSearchChange} />
-        <ConfigProvider
-            theme={{
-                cssVar: true,
-                hashed: false
-            }}
-            renderEmpty={() => <div className={'empty-message'}>No data available.</div>}
-        >
-            <div ref={ref}
-                tabIndex={-1}
-                style={{ outline: 'none' }}
-                onKeyDown={onTableKeyDown}
+    return (
+        <div id='tree-table-root' onKeyDown={onKeyDown}>
+            <SearchOverlay key={'search'} ref={globalSearchRef} onHide={onSearchHide} onShow={onSearchShow} onChange={onSearchChange} />
+            <ConfigProvider
+                theme={{
+                    cssVar: true,
+                    hashed: false
+                }}
+                renderEmpty={() => <div className={'empty-message'}>No data available.</div>}
             >
-                <Table<CDTTreeItem<T>>
-                    ref={tblRef}
-                    columns={columns}
-                    dataSource={filteredData}
-                    components={{ body: { row: BodyRow } }}
-                    virtual
-                    scroll={{ x: width, y: height - 2 }}
-                    showHeader={false}
-                    pagination={false}
-                    rowClassName={(record) => classNames({ 'ant-table-row-selected': record.key === selection?.key, 'ant-table-row-matched': record.matching ?? false })}
-                    onRow={(record) => ({
-                        record,
-                        onClick: (event) => onRowClick(record, event),
-                    })}
-                    expandable={{
-                        expandIcon: props => <ExpandIcon {...props} />,
-                        showExpandColumn: true,
-                        expandedRowKeys: expandedRowKeys,
-                        onExpand: handleExpand
-                    }}
-                />
-            </div>
-        </ConfigProvider>
-    </div>;
+                <div ref={ref} tabIndex={-1} style={{ outline: 'none' }} onKeyDown={onTableKeyDown}>
+                    <Table<CDTTreeItem<T>>
+                        ref={tblRef}
+                        columns={columns}
+                        dataSource={filteredData}
+                        components={{ body: { row: BodyRow } }}
+                        virtual
+                        scroll={{ x: width, y: height - 2 }}
+                        showHeader={false}
+                        pagination={false}
+                        rowClassName={record =>
+                            classNames({
+                                'ant-table-row-selected': record.key === selection?.key,
+                                'ant-table-row-matched': record.matching ?? false
+                            })
+                        }
+                        onRow={record => ({
+                            record,
+                            onClick: event => onRowClick(record, event)
+                        })}
+                        expandable={{
+                            expandIcon: props => <ExpandIcon {...props} />,
+                            showExpandColumn: true,
+                            expandedRowKeys: expandedRowKeys,
+                            onExpand: handleExpand
+                        }}
+                    />
+                </div>
+            </ConfigProvider>
+        </div>
+    );
 }

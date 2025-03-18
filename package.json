@@ -1,26 +1,22 @@
 {
     "name": "@eclipse-cdt-cloud/vscode-ui-components",
-    "displayName": "VSCode UI Components",
-    "description": "VSCode UI Components for React",
     "version": "0.0.1",
-    "publisher": "eclipse-cdt",
-    "license": "MIT",
+    "description": "VS Code UI Components for React",
     "repository": "https://github.com/eclipse-cdt-cloud/vscode-ui-components",
+    "license": "MIT",
     "qna": "https://github.com/eclipse-cdt-cloud/vscode-ui-components/issues",
+    "publisher": "eclipse-cdt",
     "main": "./lib/index.js",
     "types": "./lib/index.d.ts",
     "files": [
         "lib"
     ],
-    "engines": {
-        "node": ">=20"
-    },
     "scripts": {
-        "prepare": "yarn clean && yarn build",
-        "clean": "rimraf ./lib ./node_modules/.tmp",
         "build": "tsc && yarn lint",
-        "watch": "tsc -w",
-        "lint": "eslint ."
+        "clean": "rimraf ./lib ./node_modules/.tmp",
+        "lint": "eslint .",
+        "prepare": "yarn clean && yarn build",
+        "watch": "tsc -w"
     },
     "dependencies": {
         "@floating-ui/react": "^0.26.17",
@@ -46,16 +42,19 @@
         "@typescript-eslint/eslint-plugin": "^5.49.0",
         "@typescript-eslint/parser": "^5.49.0",
         "eslint": "^9.21.0",
+        "eslint-plugin-header": "^3.1.1",
         "globals": "^16.0.0",
         "prettier": "^3.5.2",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
+        "prettier-plugin-packagejson": "^2.5.8",
+        "rimraf": "^6.0.1",
         "typescript": "^5.7.3",
-        "typescript-eslint": "^8.25.0",
-        "rimraf": "^6.0.1"
+        "typescript-eslint": "^8.25.0"
     },
     "peerDependencies": {
         "react": "^18.2.0",
         "react-dom": "^18.2.0"
+    },
+    "engines": {
+        "node": ">=20"
     }
 }

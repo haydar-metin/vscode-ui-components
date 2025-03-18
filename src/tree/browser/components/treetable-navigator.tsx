@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (C) 2024 EclipseSource and others.
+ * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE File
@@ -22,7 +22,7 @@ export interface TreeNavigatorProps<T extends CDTTreeItemResource> {
 export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> {
     constructor(private readonly props: TreeNavigatorProps<T>) {}
 
-    next(node: CDTTreeItem) {
+    public next(node: CDTTreeItem) {
         if (node.children && node.children.length > 0 && this.props.expandedRowKeys.includes(node.id)) {
             // Go deeper
             this.select(node.children[0]);
@@ -40,7 +40,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         }
     }
 
-    nextPage() {
+    public nextPage() {
         this.scrollRelative(this.visibleDomElementCount);
     }
 
@@ -64,7 +64,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         }
     }
 
-    previous(node: CDTTreeItem) {
+    public previous(node: CDTTreeItem) {
         let prevNode = this.getPrevious(node);
         if (prevNode) {
             // Go deeper to the last child if the previous node has children and is expanded
@@ -81,7 +81,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         }
     }
 
-    previousPage() {
+    public previousPage() {
         this.scrollRelative(-(this.visibleDomElementCount - 1));
     }
 
@@ -91,7 +91,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         return siblings[index - 1];
     }
 
-    toggle(node: CDTTreeItem) {
+    public toggle(node: CDTTreeItem) {
         if (this.props.expandedRowKeys.includes(node.id)) {
             this.collapse(node);
         } else {
@@ -99,7 +99,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         }
     }
 
-    expand(node: CDTTreeItem) {
+    public expand(node: CDTTreeItem) {
         if (node.children && node.children.length > 0) {
             if (this.props.expandedRowKeys.includes(node.id)) {
                 this.next(node);
@@ -109,7 +109,7 @@ export class TreeNavigator<T extends CDTTreeItemResource = CDTTreeItemResource> 
         }
     }
 
-    collapse(node: CDTTreeItem) {
+    public collapse(node: CDTTreeItem) {
         if (node.children && node.children.length > 0 && this.props.expandedRowKeys.includes(node.id)) {
             this.props.expand(false, node as CDTTreeItem<T>);
         } else if (node.parent && !CDTTreeItem.isRoot(node.parent)) {
