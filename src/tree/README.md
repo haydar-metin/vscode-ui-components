@@ -1,14 +1,17 @@
 # Tree
 
-The Tree component is built on top of the Ant Tree and offers functionality for rendering both tree structures and tree tables (when multiple columns are provided).
+The Tree component is built on top of the [Ant Table](https://ant.design/components/table) with a tree structure and offers functionality for rendering both tree and tree tables (when multiple columns are provided).
 
 ## Webview / React
 
 Data retrieval and provisioning for the `CDTTree` component are the developer's responsibility.  
 Refer to the component's properties for further details.
 
+> Hint: `CDTTreeItem` corresponds to the `TreeItem` of the [`VS Code Tree Data Provider`](https://code.visualstudio.com/api/extension-guides/tree-view#tree-data-provider).
+
 ```ts
 // Webview
+import { CDTTreeItem } from '@eclipse-cdt-cloud/vscode-ui-components';
 import {
     messenger,
     CDTTree
@@ -20,9 +23,9 @@ messenger.start();
 
 function App() {
   // 1) Retrieve the data source (serialized DTOs)
-  const dtos = ...
+  const dtos: ExampleDTO[] = ...
   // 2) Convert them to CDTTreeItems (recommended: use `CDTTreeResourceConverter`)
-  const dataSource = treeResourceConverter.convert(dtos, {...})
+  const dataSource: CDTTreeItem[] = treeResourceConverter.convert(dtos, {...})
   return <CDTTree {...} dataSource={dataSource} />;
 }
 
@@ -48,6 +51,8 @@ Its API follows a similar structure to the [VS Code Tree View API](https://code.
 ### Example Implementations
 
 #### `CDTTreeDataProvider`
+
+> Hint: `Example` is your domain model, and `ExampleDTO` is the object sent to the webview.
 
 ```ts
 export class TreeDataProvider implements CDTTreeDataProvider<Example, ExampleDTO> {
@@ -108,6 +113,8 @@ export class TreeTableWebView extends CDTTreeWebviewViewProvider<Example> {
 ```
 
 #### `CDTTreeResourceConverter`
+
+> Hint: `CDTTreeItem`s are the items that will be rendered by `CDTTree`.
 
 ```ts
 export class ExampleConverter implements CDTTreeResourceConverter<ExampleDTO> {

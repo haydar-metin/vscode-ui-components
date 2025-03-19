@@ -12,6 +12,10 @@ import type { MaybePromise } from '../../base/utils';
 /**
  * A tree data provider that provides data for the CDTTree.
  *
+ * The CDTTree uses it's own tree item model. This data provider is responsible for converting the domain model
+ * to serialized items that are actually send to the webview.
+ * Those serialized items are then used as a basis for the CDTTree.
+ *
  * @param TNode The type of the tree nodes in the domain model.
  * @param TSerializedNode The type of the serialized tree nodes. Those are the nodes that
  * are actually send to the webview to be displayed in the tree.
