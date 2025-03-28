@@ -1,11 +1,12 @@
-/********************************************************************************
- * Copyright (C) 2024-2025 EclipseSource and others.
+/**********************************************************************************
+ * Copyright (c) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
- * terms of the MIT License as outlined in the LICENSE File
- ********************************************************************************/
+ * terms of the MIT License as outlined in the LICENSE file.
+ **********************************************************************************/
 
-import { CDTTreeItemResource, CDTTreeItem, CDTTreeTableStringColumn } from '../../common';
+import React, { useEffect, useRef, useState } from 'react';
+import { CDTTreeItem, CDTTreeItemResource, CDTTreeTableStringColumn } from '../../common';
 
 /**
  * Recursively filters the tree to include items that match the search text
@@ -113,4 +114,50 @@ export function getAncestors<T extends CDTTreeItemResource>(item: CDTTreeItem<T>
         current = current.parent as unknown as CDTTreeItem<T>;
     }
     return ancestors;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ClickHookHandler<T> = (event: React.MouseEvent<T>, payload: any) => void;
+
+type UseClickHookProps<T> = {
+    onSingleClick?: ClickHookHandler<T>;
+    onDoubleClick?: ClickHookHandler<T>;
+    delay?: number;
+};
+
+export function useClickHook<T = Element>({ onSingleClick, onDoubleClick, delay = 250 }: UseClickHookProps<T>): ClickHookHandler<T> {
+    const [clicks, setClicks] = useState(0);
+    const [payload, setPayload] = useState<unknown>(undefined);
+    const eventRef = useRef<React.MouseEvent<T, MouseEvent> | null>(null);
+
+    useEffect(() => {
+        let singleClickTimer: ReturnType<typeof setTimeout> | null = null;
+
+        if (clicks === 1) {
+            // Trigger single-click after delay
+            singleClickTimer = setTimeout(() => {
+                if (clicks === 1 && onSingleClick && eventRef.current) {
+                    onSingleClick(eventRef.current, payload); // Trigger onClick
+                }
+                setClicks(0); // Reset clicks after the delay
+            }, delay);
+        } else if (clicks === 2) {
+            // Trigger double-click immediately
+            if (onDoubleClick && eventRef.current) {
+                onDoubleClick(eventRef.current, payload); // Trigger onDoubleClick
+            }
+            setClicks(0); // Reset clicks immediately
+        }
+
+        // Cleanup the timer on effect cleanup or if clicks change
+        return () => {
+            if (singleClickTimer) clearTimeout(singleClickTimer);
+        };
+    }, [clicks, delay, onSingleClick, onDoubleClick]);
+
+    return (event, payload) => {
+        eventRef.current = event;
+        setPayload(payload);
+        setClicks(prev => prev + 1); // Increment the click count
+    };
 }

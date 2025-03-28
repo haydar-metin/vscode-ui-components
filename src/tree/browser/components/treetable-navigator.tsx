@@ -2,10 +2,10 @@
  * Copyright (C) 2024-2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
- * terms of the MIT License as outlined in the LICENSE File
- ********************************************************************************/
+ * terms of the MIT License as outlined in the LICENSE file.
+ **********************************************************************************/
 
-import { CDTTreeItemResource, CDTTreeItem } from '../../common';
+import { CDTTreeItem, CDTTreeItemResource } from '../../common';
 
 export interface TreeNavigatorProps<T extends CDTTreeItemResource> {
     ref: React.RefObject<HTMLDivElement>;

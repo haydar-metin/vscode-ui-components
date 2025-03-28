@@ -34,8 +34,19 @@ export interface CDTTreeExecuteCommand {
     value?: unknown;
 }
 
+export interface CDTTreePartialUpdate<TItem = unknown> {
+    items?: TItem[];
+}
+
 export namespace CDTTreeMessengerType {
+    /**
+     * Replace the current state with the given state.
+     */
     export const updateState: NotificationType<CDTTreeExtensionModel> = { method: 'updateState' };
+    /**
+     * Update the nodes with the given nodes.
+     */
+    export const updatePartial: NotificationType<CDTTreePartialUpdate> = { method: 'updatePartial' };
     export const ready: NotificationType<void> = { method: 'ready' };
 
     export const executeCommand: NotificationType<CDTTreeNotification<CDTTreeExecuteCommand>> = { method: 'executeCommand' };

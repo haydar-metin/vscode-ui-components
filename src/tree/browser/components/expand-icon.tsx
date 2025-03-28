@@ -1,13 +1,13 @@
-/********************************************************************************
- * Copyright (C) 2024-2025 EclipseSource and others.
+/**********************************************************************************
+ * Copyright (c) 2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
- * terms of the MIT License as outlined in the LICENSE File
- ********************************************************************************/
+ * terms of the MIT License as outlined in the LICENSE file.
+ **********************************************************************************/
 
-import type { CDTTreeItemResource, CDTTreeItem } from '../../common/tree-model-types';
-import { classNames } from '../../../base';
 import React from 'react';
+import { classNames } from '../../../base';
+import { CDTTreeItem, CDTTreeItemResource } from '../../common';
 
 export interface RenderExpandIconProps<RecordType> {
     expanded: boolean;

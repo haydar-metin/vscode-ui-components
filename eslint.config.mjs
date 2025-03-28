@@ -5,10 +5,10 @@
  * terms of the MIT License as outlined in the LICENSE file.
  **********************************************************************************/
 
-import globals from 'globals';
 import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
 import header from 'eslint-plugin-header';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
 
 header.rules.header.meta.schema = false;
 
@@ -32,13 +32,7 @@ export default tseslint.config(
             // ESLint Convention
             quotes: ['error', 'single'],
             semi: ['error', 'always'],
-            indent: [
-                'error',
-                4,
-                {
-                    SwitchCase: 1
-                }
-            ],
+
             'block-spacing': ['error', 'always'],
             'brace-style': [
                 'error',

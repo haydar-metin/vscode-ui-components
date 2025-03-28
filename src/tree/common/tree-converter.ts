@@ -5,7 +5,7 @@
  * terms of the MIT License as outlined in the LICENSE File
  ********************************************************************************/
 
-import type { CDTTreeItemResource, CDTTreeItem } from './tree-model-types';
+import type { CDTTreeItem, CDTTreeItemResource } from './tree-model-types';
 
 /**
  * A TreeConverterContext is used to pass additional information to the TreeResourceConverter.
@@ -27,7 +27,11 @@ export interface CDTTreeConverterContext<TResource extends CDTTreeItemResource =
      * This can be useful to access parent resources.
      * It is filled while converting the tree.
      */
-    resourceMap: Map<string, TResource>;
+    assignedResources: Record<string, TResource | undefined>;
+    /**
+     * A map of all items that are currently in the tree.
+     */
+    assignedItems: Record<string, CDTTreeItem<TResource> | undefined>;
 }
 
 /**

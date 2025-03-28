@@ -1,12 +1,12 @@
-/********************************************************************************
- * Copyright (C) 2024-2025 EclipseSource, Arm Limited and others.
+/**********************************************************************************
+ * Copyright (c) 2024-2025 EclipseSource, Arm Limited and others.
  *
  * This program and the accompanying materials are made available under the
- * terms of the MIT License as outlined in the LICENSE File
- ********************************************************************************/
+ * terms of the MIT License as outlined in the LICENSE file.
+ **********************************************************************************/
 
 import { VSCodeContext } from '../../vscode/webview-types';
-import type { CDTTreeTableColumn, CDTTreeTableColumnDefinition } from './tree-table-column-types';
+import { CDTTreeTableColumn, CDTTreeTableColumnDefinition } from './tree-table-column-types';
 
 // ==== Items ====
 
@@ -82,10 +82,13 @@ export interface CDTTreeExtensionModel<TItems = unknown> {
  * The view model that is used to update the CDT tree view.
  * It is the actual model that is used to render the tree view.
  */
-export interface CDTTreeModel<TItem extends CDTTreeItemResource = CDTTreeItemResource> {
+export interface CDTTreeViewModel<TItem extends CDTTreeItemResource = CDTTreeItemResource> {
+    root: CDTTreeItem<CDTTreeItemResource>;
     items: CDTTreeItem<TItem>[];
     expandedKeys: string[];
     pinnedKeys: string[];
+    references: Record<string, CDTTreeItem<TItem> | undefined>;
+    resources: Record<string, TItem | undefined>;
 }
 
 export interface CDTTreeWebviewContext {

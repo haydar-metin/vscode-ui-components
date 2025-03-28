@@ -8,25 +8,37 @@
 import '../../../style/tree/tree-common.css';
 import '../../../style/tree/tree.css';
 
-import { ConfigProvider, Table, TableColumnsType } from 'antd';
+import { ConfigProvider, Table } from 'antd';
 import { ColumnType, ExpandableConfig } from 'antd/es/table/interface';
-import React from 'react';
+import classNames from 'classnames';
+import { Resizable } from 're-resizable';
+import { default as React, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { debounce } from 'throttle-debounce';
+import { findNestedValue } from '../../base';
+import { CommandDefinition } from '../../vscode/webview-types';
+import {
+    CDTTreeItem,
+    CDTTreeItemResource,
+    CDTTreeTableActionColumn,
+    CDTTreeTableActionColumnCommand,
+    CDTTreeTableColumnDefinition,
+    CDTTreeTableStringColumn,
+    CDTTreeWebviewContext
+} from '../common/index';
+import ActionCell from './components/cells/ActionCell';
+import StringCell from './components/cells/StringCell';
 import { ExpandIcon } from './components/expand-icon';
 import { SearchOverlay } from './components/search-overlay';
 import { TreeNavigator } from './components/treetable-navigator';
-import { filterTree, getAncestors, traverseTree } from './components/utils';
-import { classNames, findNestedValue } from '../../base';
-import {
-    type CDTTreeItemResource,
-    type CDTTreeTableColumnDefinition,
-    type CDTTreeItem,
-    CDTTreeWebviewContext,
-    type CDTTreeTableStringColumn,
-    type CDTTreeTableActionColumn
-} from '../common';
-import type { CommandDefinition } from '../../vscode/webview-types';
-import { createHighlightedText, createLabelWithTooltip } from '../../label/label-helpers';
+import { filterTree, getAncestors, traverseTree, useClickHook } from './components/utils';
+
+const COLUMN_MIN_WIDTH = 50;
+const ACTION_COLUMN_WIDTH = 16 * 5;
+
+export interface PublicAPI {
+    selectRow: (record: CDTTreeItem) => void;
+    setEditRowKey: (key: string | undefined) => void;
+}
 
 /**
  * Component to render a tree table.
@@ -69,7 +81,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
         /**
          * Callback to be called when a row is pinned or unpinned.
          */
-        onPin?: (event: React.UIEvent, pinned: boolean, record: CDTTreeItem<T>) => void;
+        onPin?: (event: React.UIEvent, pinned: boolean, record: CDTTreeItem<T>, api: PublicAPI) => void;
     };
     /**
      * Configuration for the actions of the tree table.
@@ -78,9 +90,21 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
         /**
          * Callback to be called when an action is triggered.
          */
-        onAction?: (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>) => void;
+        onAction?: (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>, api: PublicAPI) => void;
+    };
+    edit?: {
+        /**
+         * Callback to be called when a row is edited.
+         */
+        onEdit?: (record: CDTTreeItem<T>, value: string, api: PublicAPI) => void;
     };
 };
+
+interface ResizeableCell {
+    resizeable?: boolean;
+    maxWidth?: number;
+    onDidColumnResize?: (event: MouseEvent | TouchEvent, width: number) => void;
+}
 
 interface BodyRowProps extends React.HTMLAttributes<HTMLDivElement> {
     'data-row-key': string;
@@ -88,7 +112,7 @@ interface BodyRowProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const BodyRow = React.forwardRef<HTMLDivElement, BodyRowProps>((props, ref) => {
-    // Support VS Code context menu items
+    // Support VSCode context menu items
     return (
         <div
             ref={ref}
@@ -104,9 +128,65 @@ const BodyRow = React.forwardRef<HTMLDivElement, BodyRowProps>((props, ref) => {
     );
 });
 
+interface BodyCellProps extends React.HTMLAttributes<HTMLDivElement>, ResizeableCell {}
+
+const BodyCell = React.forwardRef<HTMLDivElement, BodyCellProps>((props, ref) => {
+    const { resizeable, onDidColumnResize, maxWidth, className, onResize, style, ...rest } = props;
+    const [width, setWidth] = useState<string | number | undefined>(props.style?.width);
+
+    useEffect(() => {
+        if (resizeable) {
+            setWidth(props.style?.width);
+        }
+    }, [props.style?.width]);
+
+    const cell = <div ref={ref} style={{ minWidth: '50px', ...style }} {...rest} className={className} onResize={onResize} />;
+
+    if (!resizeable) {
+        return cell;
+    }
+
+    return (
+        <Resizable
+            minWidth={50}
+            maxWidth={maxWidth}
+            className={classNames('ant-table-cell-resizable', className ?? '')}
+            size={{
+                width
+            }}
+            onResizeStart={(_event, _direction, ref) => {
+                const row = ref.closest('.ant-table-row');
+                row?.classList.add('ant-table-row-resizing');
+            }}
+            onResize={(event, _direction, ref, _delta) => {
+                onDidColumnResize?.(event, ref.clientWidth);
+            }}
+            onResizeStop={(event, _direction, ref, _delta) => {
+                onDidColumnResize?.(event, ref.clientWidth);
+                const row = ref.closest('.ant-table-row');
+                row?.classList.remove('ant-table-row-resizing');
+            }}
+            handleClasses={{
+                right: 'resizable-handle'
+            }}
+            enable={{
+                bottom: false,
+                bottomLeft: false,
+                bottomRight: false,
+                left: false,
+                right: true,
+                top: false,
+                topLeft: false,
+                topRight: false
+            }}
+            {...rest}
+        ></Resizable>
+    );
+});
+
 function useWindowSize() {
-    const [size, setSize] = React.useState({ width: window.innerWidth, height: window.innerHeight });
-    React.useLayoutEffect(() => {
+    const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+    useLayoutEffect(() => {
         const updateSize = debounce(100, () => {
             setSize({ width: window.innerWidth, height: window.innerHeight });
         });
@@ -121,9 +201,14 @@ function useWindowSize() {
     return size;
 }
 
-export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): React.ReactElement {
+namespace InternalCommands {
+    export const PIN_ID = 'cdt.tree.pin';
+    export const UNPIN_ID = 'cdt.tree.unpin';
+}
+
+export const CDTTree = <T extends CDTTreeItemResource>(props: CDTTreeProps<T>) => {
     const { width, height } = useWindowSize();
-    const [globalSearchText, setGlobalSearchText] = React.useState<string | undefined>();
+    const [globalSearchText, setGlobalSearchText] = useState<string | undefined>();
     const globalSearchRef = React.useRef<SearchOverlay>(null);
     const autoSelectRowRef = React.useRef<boolean>(false);
 
@@ -132,7 +217,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
 
     // ==== Data ====
 
-    const filteredData = React.useMemo(() => {
+    const filteredData = useMemo(() => {
         let data = props.dataSource ?? [];
         if (globalSearchText) {
             data = filterTree(data, globalSearchText);
@@ -145,7 +230,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
 
     // ==== Search ====
 
-    const onKeyDown = React.useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
         if (e.ctrlKey && e.key === 'f') {
             e.preventDefault();
             e.stopPropagation();
@@ -153,18 +238,18 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
         }
     }, []);
 
-    const onSearchShow = React.useCallback(() => setGlobalSearchText(globalSearchRef.current?.value()), []);
-    const onSearchHide = React.useCallback(() => {
+    const onSearchShow = useCallback(() => setGlobalSearchText(globalSearchRef.current?.value()), []);
+    const onSearchHide = useCallback(() => {
         setGlobalSearchText(undefined);
         autoSelectRowRef.current = true;
     }, [autoSelectRowRef]);
-    const onSearchChange = React.useMemo(() => debounce(300, (text: string) => setGlobalSearchText(text)), []);
+    const onSearchChange = useMemo(() => debounce(300, (text: string) => setGlobalSearchText(text)), []);
 
     // ==== Selection ====
 
-    const [selection, setSelection] = React.useState<CDTTreeItem>();
+    const [selection, setSelection] = useState<CDTTreeItem>();
 
-    const selectRow = React.useCallback(
+    const selectRow = useCallback(
         (record: CDTTreeItem) => {
             // Single select only
             if (selection?.key !== record.key) {
@@ -176,7 +261,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
 
     // ==== Expansion ====
 
-    const expandedRowKeys = React.useMemo(() => {
+    const expandedRowKeys = useMemo(() => {
         const expanded = new Set(props.expansion?.expandedRowKeys ?? []);
         if (globalSearchText) {
             // on search expand all nodes that match the search
@@ -191,16 +276,19 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
         return Array.from(expanded);
     }, [filteredData, globalSearchText, props.expansion?.expandedRowKeys, selection, autoSelectRowRef.current]);
 
-    const handleExpand = React.useCallback(
+    const handleExpand = useCallback(
         (expanded: boolean, record: CDTTreeItem<T>) => {
             props.expansion?.onExpand?.(expanded, record);
         },
         [props.expansion?.onExpand]
     );
 
+    // ==== Edit ====
+    const [editRowKey, setEditRowKey] = useState<string | undefined>();
+
     // ==== Index ====
 
-    const dataSourceIndex = React.useMemo(() => {
+    const dataSourceIndex = useMemo(() => {
         const rowIndex = new Map<string, number>();
         const keyIndex = new Map<string, CDTTreeItem>();
 
@@ -238,7 +326,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
         [ref, dataSourceIndex.rowIndex, expandedRowKeys, handleExpand, selectRow]
     );
 
-    const onTableKeyDown = React.useCallback(
+    const onTableKeyDown = useCallback(
         (event: React.KeyboardEvent<HTMLDivElement>) => {
             const selectedKey = selection?.key;
             if (!selectedKey) {
@@ -288,141 +376,175 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
         [selection, dataSourceIndex]
     );
 
-    // ==== Renderers ====
+    // ==== Columns ====
+    const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+    const [prevWindowWidth, setPrevWindowWidth] = useState(width);
+    const availableWidth = useMemo(
+        () => width - ACTION_COLUMN_WIDTH - COLUMN_MIN_WIDTH * (props.columnDefinitions?.filter(c => c.resizable).length ?? 0),
+        [width, props.columnDefinitions]
+    );
 
-    const renderStringColumn = React.useCallback((label: string, item: CDTTreeItem<T>, column: CDTTreeTableStringColumn) => {
-        const icon = column.icon ? <i className={classNames('cell-icon', column.icon)}></i> : null;
-        let content = createHighlightedText(label, column.highlight);
+    const handleResize = (field: string) => (_: MouseEvent | TouchEvent, width: number) => {
+        setColumnWidths(prev => ({ ...prev, [field]: width }));
+    };
 
-        if (column.tooltip) {
-            content = createLabelWithTooltip(<span>{content}</span>, column.tooltip);
+    useEffect(() => {
+        const delta = width - prevWindowWidth;
+        if (delta < 0) {
+            // Shrink columns that are too wide
+            setColumnWidths(prev => {
+                const newWidths = { ...prev };
+                for (const key in newWidths) {
+                    const currentWidth = newWidths[key];
+                    if (currentWidth > availableWidth) {
+                        newWidths[key] = Math.max(currentWidth + delta, COLUMN_MIN_WIDTH);
+                    }
+                }
+                return newWidths;
+            });
         }
+        setPrevWindowWidth(width);
+    }, [width]);
 
-        return (
-            <div className='tree-cell ant-table-cell-ellipsis' tabIndex={0}>
-                {icon}
-                {content}
-            </div>
-        );
+    const getActions = useCallback((record: CDTTreeItem<T>, column: CDTTreeTableActionColumn) => {
+        const actions: CDTTreeTableActionColumnCommand[] = [];
+        if (record.pinned !== undefined) {
+            actions.push({
+                commandId: record.pinned ? InternalCommands.UNPIN_ID : InternalCommands.PIN_ID,
+                title: record.pinned ? 'Unpin row' : 'Pin row',
+                icon: record.pinned ? 'pin' : 'pinned',
+                value: !record.pinned
+            });
+        }
+        actions.push(...column.commands);
+        return actions;
     }, []);
 
-    const renderActionColumn = React.useCallback(
+    const onAction = useCallback(
+        (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>) => {
+            if (command.commandId === InternalCommands.PIN_ID || command.commandId === InternalCommands.UNPIN_ID) {
+                event.stopPropagation();
+                props.pin?.onPin?.(event, value as boolean, record, puplicAPI);
+                return;
+            }
+
+            return props.action?.onAction?.(event, command, value, record, puplicAPI);
+        },
+        [props.action, props.pin?.onPin]
+    );
+
+    const renderActionCell = useCallback(
         (column: CDTTreeTableActionColumn | undefined, record: CDTTreeItem<T>) => {
-            const actions: React.ReactNode[] = [];
-
-            if (record.pinned !== undefined) {
-                actions.push(
-                    <i
-                        key={record.pinned ? 'unpin' : 'pin'}
-                        title={record.pinned ? 'Unpin row' : 'Pin row'}
-                        className={`codicon ${record.pinned ? 'codicon-pin' : 'codicon-pinned'}`}
-                        onClick={event => props.pin?.onPin?.(event, !record.pinned, record)}
-                        aria-label={record.pinned ? 'Unpin row' : 'Pin row'}
-                        role='button'
-                        tabIndex={0}
-                        onKeyDown={event => {
-                            if (event.key === 'Enter') props.pin?.onPin?.(event, !record.pinned, record);
-                        }}
-                    ></i>
-                );
+            if (!column) {
+                return undefined;
             }
 
-            if (column?.commands) {
-                column.commands.forEach(command => {
-                    actions.push(
-                        <i
-                            key={command.commandId}
-                            title={command.title}
-                            className={`codicon codicon-${command.icon}`}
-                            onClick={event => props.action?.onAction?.(event, command, command.value, record)}
-                            aria-label={command.title}
-                            role='button'
-                            tabIndex={0}
-                            onKeyDown={event => {
-                                if (event.key === 'Enter') props.action?.onAction?.(event, command, command.value, record);
-                            }}
-                        ></i>
-                    );
-                });
-            }
-
-            return <div className={'tree-actions'}>{actions}</div>;
+            return <ActionCell column={column} record={record} actions={getActions(record, column)} onAction={onAction} />;
         },
         [props.pin, props.action]
     );
 
-    // ==== Columns ====
+    const onSubmitEdit = useCallback(
+        (record: CDTTreeItem<T>, value: string) => {
+            setEditRowKey(undefined);
+            props.edit?.onEdit?.(record, value, puplicAPI);
+        },
+        [props.edit?.onEdit]
+    );
 
-    const createColumns = (columnDefinitions: CDTTreeTableColumnDefinition[]): TableColumnsType<CDTTreeItem<T>> => {
-        function stringColumn(columnDefinition: CDTTreeTableColumnDefinition): ColumnType<CDTTreeItem<T>> {
-            return {
-                title: columnDefinition.field,
-                dataIndex: ['columns', columnDefinition.field, 'label'],
-                width: 0,
-                ellipsis: true,
-                render: (label, record) => {
-                    const column = findNestedValue<CDTTreeTableStringColumn>(record, ['columns', columnDefinition.field]);
+    const onSubmitCancel = useCallback(() => {
+        setEditRowKey(undefined);
+    }, []);
 
-                    if (!column) {
-                        return undefined;
-                    }
-
-                    return renderStringColumn(label, record, column);
-                },
-                onCell: record => {
-                    const column = findNestedValue<CDTTreeTableStringColumn>(record, ['columns', columnDefinition.field]);
-
-                    if (!column) {
-                        return {};
-                    }
-
-                    const colSpan = column.colSpan;
-                    if (colSpan) {
-                        return {
-                            colSpan: colSpan === 'fill' ? columnDefinitions.length : colSpan,
-                            style: {
-                                zIndex: 1
-                            }
-                        };
-                    }
-
-                    return {};
-                }
-            };
+    const onEdit = useCallback((record: CDTTreeItem<T>, edit: boolean) => {
+        if (edit) {
+            selectRow(record);
+            setEditRowKey(record.key);
+        } else {
+            setEditRowKey(undefined);
         }
+    }, []);
 
-        function actionColumn(columnDefinition: CDTTreeTableColumnDefinition): ColumnType<CDTTreeItem<T>> {
-            return {
-                title: columnDefinition.field,
-                dataIndex: ['columns', columnDefinition.field],
-                width: 16 * 5,
-                render: renderActionColumn
-            };
-        }
+    const isEditing = useCallback(
+        (column: CDTTreeTableStringColumn, record: CDTTreeItem<T>) =>
+            editRowKey === record.key || column.edit?.type === 'boolean' || column.edit?.type === 'enum',
+        [editRowKey]
+    );
 
-        return [
-            ...(columnDefinitions?.map(c => {
-                if (c.type === 'string') {
-                    return stringColumn(c);
-                } else if (c.type === 'action') {
-                    return actionColumn(c);
+    const renderStringCell = useCallback(
+        (column: CDTTreeTableStringColumn | undefined, record: CDTTreeItem<T>) => {
+            if (!column) {
+                return undefined;
+            }
+
+            return (
+                <StringCell
+                    column={column}
+                    record={record}
+                    onSubmit={onSubmitEdit}
+                    onCancel={onSubmitCancel}
+                    onEdit={onEdit}
+                    editing={isEditing(column, record)}
+                    autoFocus={column.edit?.type === 'text'}
+                />
+            );
+        },
+        [editRowKey]
+    );
+
+    const columns = useMemo(() => {
+        return (
+            props.columnDefinitions?.map<ColumnType<CDTTreeItem<T>>>(colDef => {
+                const resizeable: ResizeableCell = {
+                    resizeable: colDef.resizable,
+                    maxWidth: availableWidth,
+                    onDidColumnResize: handleResize(colDef.field)
+                };
+
+                if (colDef.type === 'string') {
+                    return {
+                        title: colDef.field,
+                        dataIndex: ['columns', colDef.field],
+                        width: columnWidths[colDef.field] ?? 0,
+                        ellipsis: true,
+                        render: renderStringCell,
+                        className: colDef.field,
+                        onCell: record => {
+                            const column = findNestedValue<CDTTreeTableStringColumn>(record, ['columns', colDef.field]);
+
+                            return !column || !column.colSpan
+                                ? ({ ...resizeable } as React.HTMLAttributes<unknown> & React.TdHTMLAttributes<unknown>)
+                                : {
+                                      ...resizeable,
+                                      resizeable: column.colSpan !== 'fill',
+                                      colSpan: column.colSpan === 'fill' ? props.columnDefinitions?.length : column.colSpan,
+                                      style: { zIndex: 1 }
+                                  };
+                        }
+                    };
                 }
-
+                if (colDef.type === 'action') {
+                    return {
+                        title: colDef.field,
+                        dataIndex: ['columns', colDef.field],
+                        width: ACTION_COLUMN_WIDTH,
+                        render: renderActionCell
+                    };
+                }
                 return {
-                    title: c.field,
-                    dataIndex: ['columns', c.field, 'label'],
+                    ...resizeable,
+                    title: colDef.field,
+                    dataIndex: ['columns', colDef.field, 'label'],
                     width: 200
                 };
-            }) ?? [])
-        ];
-    };
-
-    const columns = React.useMemo(() => createColumns(props.columnDefinitions ?? []), [props.columnDefinitions]);
+            }) ?? []
+        );
+    }, [props.columnDefinitions, columnWidths, renderStringCell, renderActionCell]);
 
     // ==== Handlers ====
 
     // Ensure that even if we lose the active element through scrolling or other means, we can still navigate by restoring the focus
-    React.useEffect(() => {
+    useEffect(() => {
         if (!ref.current) {
             return;
         }
@@ -436,7 +558,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
             if (!selectedRow) {
                 // Selected row was removed from the DOM, focus on the table
                 ref.current?.focus();
-            } else if (selectedRow !== document.activeElement) {
+            } else if (selectedRow !== document.activeElement && !selectedRow.contains(document.activeElement)) {
                 // Selected row is still in the DOM, but not focused
                 selectedRow?.focus();
             }
@@ -447,7 +569,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
     }, [ref.current]);
 
     // Abort scrolling when mouse drag was finished (e.g., left mouse button is no longer pressed) outside the iframe
-    React.useEffect(() => {
+    useEffect(() => {
         const abortScroll = (event: MouseEvent) => {
             if (!(event.buttons & 1)) {
                 // left button is no longer pressed...
@@ -463,25 +585,36 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
     }, []);
 
     // Scroll to selected row if autoSelectRowRef is set
-    React.useEffect(() => {
+    useEffect(() => {
         if (autoSelectRowRef.current && selection) {
             tblRef.current?.scrollTo({ key: selection.key });
             autoSelectRowRef.current = false;
         }
     }, [autoSelectRowRef.current]);
 
-    const onRowClick = React.useCallback(
-        (record: CDTTreeItem<T>, event: React.MouseEvent<HTMLElement>) => {
+    const onRowSingleClick = useCallback(
+        (_event: React.MouseEvent<HTMLElement>, record: CDTTreeItem<T>) => {
             const isExpanded = expandedRowKeys?.includes(record.id);
             handleExpand(!isExpanded, record);
             selectRow(record);
-
-            event.currentTarget.focus();
         },
-        [props.expansion]
+        [props.expansion?.expandedRowKeys]
     );
 
+    const onRowClick = useClickHook<HTMLElement>({
+        onSingleClick: onRowSingleClick,
+        delay: 10 // We don't have a double click event for now
+    });
+
     // ==== Return ====
+
+    const puplicAPI = useMemo<PublicAPI>(
+        () => ({
+            selectRow,
+            setEditRowKey
+        }),
+        [selectRow, setEditRowKey]
+    );
 
     return (
         <div id='tree-table-root' onKeyDown={onKeyDown}>
@@ -498,7 +631,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
                         ref={tblRef}
                         columns={columns}
                         dataSource={filteredData}
-                        components={{ body: { row: BodyRow } }}
+                        components={{ body: { row: BodyRow, cell: BodyCell } }}
                         virtual
                         scroll={{ x: width, y: height - 2 }}
                         showHeader={false}
@@ -511,7 +644,7 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
                         }
                         onRow={record => ({
                             record,
-                            onClick: event => onRowClick(record, event)
+                            onClick: event => onRowClick(event, record)
                         })}
                         expandable={{
                             expandIcon: props => <ExpandIcon {...props} />,
@@ -524,4 +657,4 @@ export function CDTTree<T extends CDTTreeItemResource>(props: CDTTreeProps<T>): 
             </ConfigProvider>
         </div>
     );
-}
+};

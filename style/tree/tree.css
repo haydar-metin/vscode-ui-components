@@ -6,7 +6,8 @@
  ********************************************************************************/
 
 .markdown {
-    line-break: anywhere;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
 .markdown hr {
@@ -113,5 +114,18 @@
 
 /* The horizontal scrollbar is not necessary */
 .ant-table .ant-table-tbody-virtual-scrollbar-horizontal {
+    display: none;
+}
+
+.ant-table .resizable-handle {
+    border-left: var(--vscode-sideBarSectionHeader-border) 2px solid;
+}
+
+.ant-table .resizable-handle:hover,
+.ant-table .resizable-handle:active {
+    border-color: var(--vscode-sash-hoverBorder);
+}
+
+.ant-table .ant-table-row.ant-table-row-resizing .tree-actions {
     display: none;
 }

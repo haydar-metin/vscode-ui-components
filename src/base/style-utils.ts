@@ -1,21 +1,23 @@
 /**********************************************************************************
- * Copyright (c) 2025 Company and others.
+ * Copyright (c) 2025 EclipseSource and others.
  *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License as outlined in the LICENSE file.
  **********************************************************************************/
 
-export function classNames(...classes: (string | Record<string, boolean>)[]): string {
+export function classNames(...classes: (string | Record<string, boolean> | undefined)[]): string {
     return classes
-        .filter(c => c !== undefined)
-        .map(c => {
-            if (typeof c === 'string') {
-                return c;
+        .map(className => {
+            if (!className) {
+                return '';
             }
-
-            return Object.entries(c)
+            if (typeof className === 'string') {
+                return className;
+            }
+            return Object.entries(className)
                 .filter(([, value]) => value)
                 .map(([key]) => key);
         })
+        .filter(className => className.length > 0)
         .join(' ');
 }

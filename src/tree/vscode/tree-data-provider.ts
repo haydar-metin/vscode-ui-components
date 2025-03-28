@@ -21,16 +21,8 @@ import type { MaybePromise } from '../../base/utils';
  * are actually send to the webview to be displayed in the tree.
  */
 export interface CDTTreeDataProvider<TNode, TSerializedNode> {
-    /**
-     * An event that is fired when the tree is disposed / terminated.
-     */
     onDidTerminate: vscode.Event<CDTTreeTerminatedEvent<TNode>>;
-
-    /**
-     * An event that is fired when the tree data changes.
-     */
     onDidChangeTreeData: vscode.Event<CDTTreeNotification<TNode | TNode[] | undefined | null>>;
-
     /**
      * Get the column definitions for the tree table.
      */
@@ -42,7 +34,7 @@ export interface CDTTreeDataProvider<TNode, TSerializedNode> {
     getSerializedRoots(): MaybePromise<TSerializedNode[]>;
 
     /**
-     * Get the serialization of the given element.
+     * Get the children of the given element.
      */
     getSerializedData(element: TNode): MaybePromise<TSerializedNode>;
 }
