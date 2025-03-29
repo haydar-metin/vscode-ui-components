@@ -35,7 +35,7 @@ import { filterTree, getAncestors, traverseTree, useClickHook } from './componen
 const COLUMN_MIN_WIDTH = 50;
 const ACTION_COLUMN_WIDTH = 16 * 5;
 
-export interface PublicAPI {
+export interface CDTTreeApi {
     selectRow: (record: CDTTreeItem) => void;
     setEditRowKey: (key: string | undefined) => void;
 }
@@ -81,7 +81,7 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
         /**
          * Callback to be called when a row is pinned or unpinned.
          */
-        onPin?: (event: React.UIEvent, pinned: boolean, record: CDTTreeItem<T>, api: PublicAPI) => void;
+        onPin?: (event: React.UIEvent, pinned: boolean, record: CDTTreeItem<T>, api: CDTTreeApi) => void;
     };
     /**
      * Configuration for the actions of the tree table.
@@ -90,13 +90,13 @@ export type CDTTreeProps<T extends CDTTreeItemResource = CDTTreeItemResource> = 
         /**
          * Callback to be called when an action is triggered.
          */
-        onAction?: (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>, api: PublicAPI) => void;
+        onAction?: (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>, api: CDTTreeApi) => void;
     };
     edit?: {
         /**
          * Callback to be called when a row is edited.
          */
-        onEdit?: (record: CDTTreeItem<T>, value: string, api: PublicAPI) => void;
+        onEdit?: (record: CDTTreeItem<T>, value: string, api: CDTTreeApi) => void;
     };
 };
 
@@ -424,11 +424,11 @@ export const CDTTree = <T extends CDTTreeItemResource>(props: CDTTreeProps<T>) =
         (event: React.UIEvent, command: CommandDefinition, value: unknown, record: CDTTreeItem<T>) => {
             if (command.commandId === InternalCommands.PIN_ID || command.commandId === InternalCommands.UNPIN_ID) {
                 event.stopPropagation();
-                props.pin?.onPin?.(event, value as boolean, record, puplicAPI);
+                props.pin?.onPin?.(event, value as boolean, record, treeApi);
                 return;
             }
 
-            return props.action?.onAction?.(event, command, value, record, puplicAPI);
+            return props.action?.onAction?.(event, command, value, record, treeApi);
         },
         [props.action, props.pin?.onPin]
     );
@@ -447,7 +447,7 @@ export const CDTTree = <T extends CDTTreeItemResource>(props: CDTTreeProps<T>) =
     const onSubmitEdit = useCallback(
         (record: CDTTreeItem<T>, value: string) => {
             setEditRowKey(undefined);
-            props.edit?.onEdit?.(record, value, puplicAPI);
+            props.edit?.onEdit?.(record, value, treeApi);
         },
         [props.edit?.onEdit]
     );
@@ -608,7 +608,7 @@ export const CDTTree = <T extends CDTTreeItemResource>(props: CDTTreeProps<T>) =
 
     // ==== Return ====
 
-    const puplicAPI = useMemo<PublicAPI>(
+    const treeApi = useMemo<CDTTreeApi>(
         () => ({
             selectRow,
             setEditRowKey

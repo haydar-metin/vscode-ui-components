@@ -8,15 +8,7 @@
 import type { NotificationType } from 'vscode-messenger-common';
 import type { CDTTreeExtensionModel } from './tree-model-types';
 
-export interface CDTTreeNotificationContext {
-    /**
-     * If true or undefined, the tree will be resynced.
-     */
-    resync?: boolean;
-}
-
 export interface CDTTreeNotification<T> {
-    context?: CDTTreeNotificationContext;
     data: T;
 }
 

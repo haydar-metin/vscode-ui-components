@@ -48,7 +48,7 @@ export function createHighlightedText(label?: string, highlights?: [number, numb
 }
 
 export function createLabelWithTooltip(child: React.JSX.Element, tooltip?: string): React.JSX.Element {
-    const label = <div className='tree-label flex-auto flex align-items-center'>{child}</div>;
+    const label = <div className='tree-label'>{child}</div>;
 
     if (tooltip === undefined) {
         return label;
