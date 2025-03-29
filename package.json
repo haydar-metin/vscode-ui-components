@@ -1,7 +1,7 @@
 {
     "name": "@eclipse-cdt-cloud/vscode-ui-components",
     "version": "0.0.1",
-    "description": "VS Code UI Components for React",
+    "description": "UI Components for Visual Studio Code Extensions",
     "repository": "https://github.com/eclipse-cdt-cloud/vscode-ui-components",
     "license": "MIT",
     "qna": "https://github.com/eclipse-cdt-cloud/vscode-ui-components/issues",
@@ -15,9 +15,10 @@
     ],
     "scripts": {
         "build": "tsc && yarn lint",
-        "clean": "rimraf ./lib ./node_modules/.tmp",
+        "clean": "yarn clean:build ./node_modules",
+        "clean:build": "rimraf ./lib ./node_modules/.tmp",
         "lint": "eslint .",
-        "prepare": "yarn clean && yarn build",
+        "prepare": "yarn clean:build && yarn build",
         "watch": "tsc -w"
     },
     "dependencies": {
